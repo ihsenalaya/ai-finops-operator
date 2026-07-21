@@ -1,0 +1,22 @@
+AI FinOps Operator installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+The operator is read-mostly by default. It only mutates the data plane when an
+explicit enforcement path is configured. Next steps:
+
+1. Check the controller is running:
+   kubectl -n {{ .Release.Namespace }} get deploy {{ include "operator.fullname" . }}
+
+2. Create your catalog and policies (see the test-apps samples in
+   operators/ai-finops-operator/automatisation/test-apps), e.g.:
+   kubectl apply -f test-apps/
+
+3. Inspect results:
+   kubectl get aigw,aiprov,aimodel,aibudget,aisov,aibreakeven,aireport,aiqgate -A
+   kubectl get configmap <report-name>-report -o jsonpath='{.data.report\.md}'
+
+4. Metrics (Prometheus ai_finops_*):
+   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "operator.fullname" . }}-metrics {{ .Values.metrics.port }}:{{ .Values.metrics.port }}
+   curl -s localhost:{{ .Values.metrics.port }}/metrics | grep ai_finops_
+
+Import automatisation/dashboards/finops-overview.json into Grafana for the
+FinOps overview dashboard.

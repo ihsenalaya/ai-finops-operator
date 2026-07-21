@@ -1,0 +1,92 @@
+{{- if .Values.rbac.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "operator.fullname" . }}-manager-role
+  labels:
+    {{- include "operator.labels" . | nindent 4 }}
+rules:
+# Reports and usage telemetry are read from / published to ConfigMaps.
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+- apiGroups: [""]
+  resources: ["namespaces", "pods", "serviceaccounts"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+# AIQualityGate runs evaluation Jobs.
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["create", "delete", "get", "list", "watch"]
+- apiGroups: ["aiops.imperium.io"]
+  resources:
+  - aibreakevenanalyses
+  - aibudgetpolicies
+  - aichangerequests
+  - aifinopsreports
+  - aigateways
+  - aimodels
+  - aiproviders
+  - aiqualitygates
+  - airouteoverrides
+  - airoutingpolicies
+  - aisovereigntypolicies
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+- apiGroups: ["aiops.imperium.io"]
+  resources:
+  - aibreakevenanalyses/finalizers
+  - aibudgetpolicies/finalizers
+  - aichangerequests/finalizers
+  - aifinopsreports/finalizers
+  - aigateways/finalizers
+  - aimodels/finalizers
+  - aiproviders/finalizers
+  - aiqualitygates/finalizers
+  - airouteoverrides/finalizers
+  - airoutingpolicies/finalizers
+  - aisovereigntypolicies/finalizers
+  verbs: ["update"]
+- apiGroups: ["aiops.imperium.io"]
+  resources:
+  - aibreakevenanalyses/status
+  - aibudgetpolicies/status
+  - aichangerequests/status
+  - aifinopsreports/status
+  - aigateways/status
+  - aimodels/status
+  - aiproviders/status
+  - aiqualitygates/status
+  - airouteoverrides/status
+  - airoutingpolicies/status
+  - aisovereigntypolicies/status
+  verbs: ["get", "patch", "update"]
+# Enforcement actuates Envoy AI Gateway routes when explicitly enabled.
+- apiGroups: ["aigateway.envoyproxy.io"]
+  resources: ["aigatewayroutelists", "aigatewayroutes"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "list", "watch"]
+{{- if .Values.leaderElection.enabled }}
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["create", "get", "list", "update", "watch"]
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "operator.fullname" . }}-manager-rolebinding
+  labels:
+    {{- include "operator.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "operator.fullname" . }}-manager-role
+subjects:
+- kind: ServiceAccount
+  name: {{ include "operator.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+{{- end }}

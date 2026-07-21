@@ -1,0 +1,81 @@
+# Gateway + measured usage. The gateway declares configmap telemetry: the
+# operator reads real usage samples (JSON) from the "greenops-usage"
+# ConfigMap below instead of scraping a live gateway. The samples emulate
+# two demo applications: an EU-compliant HR chatbot on Mistral and a
+# US-routed marketing assistant on GPT-4o (which triggers sovereignty
+# findings under the FR/EU policy).
+#
+# The HR chatbot also carries a small canary share on mistral-small-latest:
+# the quality gate in 04-quality-gate.yaml evaluates that downgrade, and it
+# needs measured reliability and latency for the candidate model, not only for
+# the source.
+apiVersion: aiops.imperium.io/v1alpha1
+kind: AIGateway
+metadata:
+  name: main-gateway
+spec:
+  type: litellm
+  endpoint: http://litellm.finops-demo.svc.cluster.local:4000
+  namespaceSelector:
+    matchLabels:
+      ai-finops/enabled: "true"
+  telemetry:
+    mode: configmap
+    sourceConfigMap: greenops-usage
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: greenops-usage
+data:
+  usage.json: |
+    [
+      {
+        "Namespace": "finops-demo",
+        "Application": "chatbot-rh",
+        "Team": "rh",
+        "Provider": "mistral-eu",
+        "Model": "mistral-large-latest",
+        "Requests": 1800,
+        "InputTokens": 2400000,
+        "OutputTokens": 860000,
+        "LatencyMillis": 640,
+        "Errors": 6
+      },
+      {
+        "Namespace": "finops-demo",
+        "Application": "marketing-assistant",
+        "Team": "marketing",
+        "Provider": "openai-us",
+        "Model": "gpt-4o",
+        "Requests": 950,
+        "InputTokens": 1900000,
+        "OutputTokens": 720000,
+        "LatencyMillis": 890,
+        "Errors": 12
+      },
+      {
+        "Namespace": "finops-demo",
+        "Application": "chatbot-rh",
+        "Team": "rh",
+        "Provider": "mistral-eu",
+        "Model": "mistral-small-latest",
+        "Requests": 140,
+        "InputTokens": 190000,
+        "OutputTokens": 62000,
+        "LatencyMillis": 430,
+        "Errors": 1
+      },
+      {
+        "Namespace": "finops-demo",
+        "Application": "support-triage",
+        "Team": "support",
+        "Provider": "mistral-eu",
+        "Model": "mistral-small-latest",
+        "Requests": 5200,
+        "InputTokens": 3100000,
+        "OutputTokens": 940000,
+        "LatencyMillis": 310,
+        "Errors": 4
+      }
+    ]

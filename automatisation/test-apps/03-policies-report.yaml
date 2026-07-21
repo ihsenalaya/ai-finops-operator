@@ -1,0 +1,77 @@
+# Governance policies + consolidated report for the demo namespace.
+apiVersion: aiops.imperium.io/v1alpha1
+kind: AIBudgetPolicy
+metadata:
+  name: demo-budget
+spec:
+  target:
+    namespace: finops-demo
+    team: rh
+    application: chatbot-rh
+  period: daily
+  budgetEUR: "40"
+  warningThresholdPercent: 70
+  criticalThresholdPercent: 90
+  hardLimitPercent: 100
+  actions:
+    onWarning:
+      - alert
+    onCritical:
+      - routeToCheaperModel
+    onHardLimit:
+      - blockOrRequireApproval
+  fallbackModelRef: mistral-small
+  # reportOnly keeps the kind demo non-mutating; switch to "enforce" with a
+  # live Envoy AI Gateway to see the real reroute.
+  enforcementMode: reportOnly
+  fallbackOnPhase: Critical
+  minFallbackQualityTier: medium
+---
+apiVersion: aiops.imperium.io/v1alpha1
+kind: AISovereigntyPolicy
+metadata:
+  name: demo-sovereignty
+spec:
+  dataResidency:
+    allowedZones:
+      - FR
+      - EU
+    forbiddenZones:
+      - US
+      - CN
+  sensitiveData:
+    externalProvidersAllowed: false
+    requireAnonymization: true
+  audit:
+    retainLogsDays: 180
+    immutableLogs: true
+  enforcementMode: reportOnly
+---
+apiVersion: aiops.imperium.io/v1alpha1
+kind: AIBreakEvenAnalysis
+metadata:
+  name: demo-breakeven
+spec:
+  target:
+    namespace: finops-demo
+    application: chatbot-rh
+  currentModelRef: mistral-large
+  alternativeSelfHosted:
+    modelName: mistral-large-latest
+    runtime: vllm
+    gpuType: h100
+    gpuCount: 2
+    monthlyGpuCostEUR: "4600"
+    estimatedOpsCostEUR: "900"
+    migrationCostEUR: "8000"
+  analysisWindowDays: 30
+---
+apiVersion: aiops.imperium.io/v1alpha1
+kind: AIFinOpsReport
+metadata:
+  name: monthly-demo-report
+spec:
+  target:
+    namespace: finops-demo
+    period: daily
+  gatewayRef: main-gateway

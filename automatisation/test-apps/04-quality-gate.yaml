@@ -1,0 +1,69 @@
+# Quality gate for a cost-reduction migration inside the compliant EU zone:
+# the HR chatbot runs on mistral-large-latest (medium cost tier) and could move
+# to mistral-small-latest (low tier). The gate decides whether quality survives
+# the downgrade before any switch.
+#
+# WHY NOT THE gpt-4o MIGRATION: the operator refuses to run the evaluation Job
+# when a model sits in a non-compliant zone —
+#   "quality evaluation blocked: model gpt-4o on provider openai-us is in
+#    non-compliant zone US for AISovereigntyPolicy demo-sovereignty"
+# It will not send golden prompts to a zone the sovereignty policy forbids, so a
+# gate spanning US and EU cannot execute. Both models here are mistral-eu.
+#
+# HOW THE EVIDENCE IS PRODUCED: evidenceRef is a destination, not an input. The
+# operator creates its own evaluation Job, which calls the endpoint below,
+# scores the responses and writes the results ConfigMap with the provenance
+# labels the controller verifies. A hand-written evidence ConfigMap is rejected:
+# a quality score is a promotion decision and is fail-closed by design.
+#
+# The endpoint is the local stub from 06-eval-gateway.yaml, because kind has no
+# provider API keys. The evaluation, scoring and provenance are the operator's
+# real code paths; only the model answering is a stub.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rh-golden-prompts
+data:
+  prompts.yaml: |
+    - id: leave-policy
+      prompt: "Explique la politique de congés en une phrase."
+      expected:
+        reference: "La réponse doit expliquer la demande de congé, la validation manager et le solde disponible."
+        requiredKeywords: ["congé", "manager", "solde"]
+        maxTokens: 160
+    - id: expense-note
+      prompt: "Comment soumettre une note de frais ?"
+      expected:
+        reference: "La réponse doit indiquer de déposer les justificatifs, choisir le centre de coût et soumettre pour approbation."
+        requiredKeywords: ["justificatifs", "approbation", "frais"]
+        maxTokens: 180
+---
+apiVersion: aiops.imperium.io/v1alpha1
+kind: AIQualityGate
+metadata:
+  name: chatbot-rh-quality-gate
+spec:
+  target:
+    namespace: finops-demo
+    application: chatbot-rh
+    team: rh
+  sourceModel: mistral-large-latest
+  candidateModel: mistral-small-latest
+  goldenDatasetRef: { name: rh-golden-prompts }
+  evidenceRef: { name: rh-quality-evidence }
+  evaluation:
+    endpoint: http://eval-gateway.finops-demo.svc.cluster.local/v1/chat/completions
+    maxTokens: 160
+    timeoutSeconds: 60
+  latencyThresholdMs: 2200
+  minSamples: 2
+  tolerancePoints: 3
+  # No live judge model in kind: judged weight 0 keeps the score on the
+  # measurable dimensions.
+  weights:
+    judged: 0
+  requiredChecks:
+    noUnexpectedRefusal: true
+    noSensitiveDataLeak: true
+    requiredKeywords: [congé, frais]
+    maxErrorRatePercent: 2

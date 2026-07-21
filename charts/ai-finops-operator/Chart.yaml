@@ -1,0 +1,17 @@
+apiVersion: v2
+name: ai-finops-operator
+description: AI FinOps Operator — standalone FinOps & sovereignty control plane for enterprise AI (cost attribution, budgets, sovereignty, break-even, quality gates, routing).
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - finops
+  - ai
+  - sovereignty
+  - kubernetes-operator
+  - llm
+home: https://github.com/ihsenalaya/ai-finops-operator
+sources:
+  - https://github.com/ihsenalaya/ai-finops-operator
+maintainers:
+  - name: ihsenalaya

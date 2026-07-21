@@ -1,0 +1,78 @@
+# Demo catalog: one EU sovereign provider (Mistral) and one US managed
+# provider (OpenAI), with the models used by the demo apps. Prices are
+# public list prices (June 2026), converted to EUR.
+apiVersion: aiops.imperium.io/v1alpha1
+kind: AIProvider
+metadata:
+  name: mistral-eu
+spec:
+  type: mistral
+  region: eu
+  dataResidency: eu
+  managed: true
+  pricing:
+    currency: EUR
+    inputTokenPricePerMillion: "1.84"
+    outputTokenPricePerMillion: "5.52"
+  compliance:
+    allowedForSensitiveData: true
+    allowedCountries:
+      - FR
+      - EU
+---
+apiVersion: aiops.imperium.io/v1alpha1
+kind: AIProvider
+metadata:
+  name: openai-us
+spec:
+  type: openai
+  region: us
+  dataResidency: us
+  managed: true
+  pricing:
+    currency: EUR
+    inputTokenPricePerMillion: "2.30"
+    outputTokenPricePerMillion: "9.20"
+  compliance:
+    allowedForSensitiveData: false
+    allowedCountries:
+      - US
+---
+apiVersion: aiops.imperium.io/v1alpha1
+kind: AIModel
+metadata:
+  name: mistral-large
+spec:
+  providerRef: mistral-eu
+  modelName: mistral-large-latest
+  type: llm
+  contextWindow: 128000
+  qualityTier: high
+  costTier: medium
+  sensitiveDataAllowed: true
+---
+apiVersion: aiops.imperium.io/v1alpha1
+kind: AIModel
+metadata:
+  name: mistral-small
+spec:
+  providerRef: mistral-eu
+  modelName: mistral-small-latest
+  type: llm
+  contextWindow: 32000
+  qualityTier: medium
+  costTier: low
+  sensitiveDataAllowed: true
+---
+apiVersion: aiops.imperium.io/v1alpha1
+kind: AIModel
+metadata:
+  name: gpt-4o
+spec:
+  providerRef: openai-us
+  modelName: gpt-4o
+  type: llm
+  contextWindow: 128000
+  qualityTier: high
+  costTier: high
+  sensitiveDataAllowed: false

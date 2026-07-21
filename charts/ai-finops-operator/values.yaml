@@ -1,0 +1,69 @@
+# Default values for ai-finops-operator.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/ihsenalaya/ai-finops-operator/finops-operator
+  # kind / local image: --set image.repository=finops-operator --set image.tag=dev --set image.pullPolicy=Never
+  tag: ""        # defaults to .Chart.AppVersion when empty
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# RBAC ClusterRole/Binding for the controller.
+rbac:
+  create: true
+
+# Leader election (enable for HA / multiple replicas).
+leaderElection:
+  enabled: false
+
+metrics:
+  bindAddress: ":8080"
+  port: 8080
+  service:
+    enabled: true
+    type: ClusterIP
+  serviceMonitor:
+    # Requires the Prometheus Operator CRDs.
+    enabled: false
+    interval: 30s
+    labels: {}
+
+health:
+  bindAddress: ":8081"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Pod-level security context (non-root).
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Extra args appended to the manager command.
+extraArgs: []

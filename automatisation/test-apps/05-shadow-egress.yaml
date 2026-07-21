@@ -1,0 +1,44 @@
+# Observed egress feeding shadow-AI detection.
+#
+# The sovereignty controller reads the "shadow-egress" ConfigMap (key
+# egress.json) of the target namespace and classifies each flow by WHERE it
+# goes, using the built-in endpoint catalog (api.openai.com -> US/openai,
+# api.mistral.ai -> EU/mistral, ...). Any flow reaching a provider host
+# directly is egress that bypassed the declared AIGateway: shadow AI.
+#
+# In production this ConfigMap is written by the eBPF/Tetragon egress collector
+# from observed SNI. The records below stand in for that collector in kind, and
+# stay consistent with the rest of the demo: the marketing assistant is the app
+# that also drives the budget overrun and the sovereignty findings.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shadow-egress
+data:
+  egress.json: |
+    [
+      {
+        "namespace": "finops-demo",
+        "application": "marketing-assistant",
+        "host": "api.openai.com",
+        "connections": 412
+      },
+      {
+        "namespace": "finops-demo",
+        "application": "support-triage",
+        "host": "api.anthropic.com",
+        "connections": 137
+      },
+      {
+        "namespace": "finops-demo",
+        "application": "data-science-notebook",
+        "host": "generativelanguage.googleapis.com",
+        "connections": 58
+      },
+      {
+        "namespace": "finops-demo",
+        "application": "chatbot-rh",
+        "host": "api.mistral.ai",
+        "connections": 24
+      }
+    ]
