@@ -36,6 +36,7 @@ auditable et versionné par GitOps de ce que ces gateways font réellement.
   - [8. Enforcement et fallback budgétaire](#8-enforcement-et-fallback-budgétaire)
 - [Installation](#installation)
 - [Démarrage rapide kind (tout-en-un)](#démarrage-rapide-kind-tout-en-un)
+- [Console graphique](#console-graphique)
 - [Configuration](#configuration)
 - [Métriques Prometheus](#métriques-prometheus)
 - [Sécurité / bonnes pratiques de déploiement](#sécurité--bonnes-pratiques-de-déploiement)
@@ -721,6 +722,36 @@ Grafana : `kubectl -n monitoring port-forward svc/monitoring-grafana 3000:80`
 shadow-AI, économies potentielles, quality gates).
 
 Démontage : `./down.sh`.
+
+## Console graphique
+
+Pour créer/modifier les CRDs sans écrire de YAML à la main : une petite interface web
+(`ui/console`) et une API REST générique (`console-api`) qui la sert. Aucun compte de
+service dédié — l'outil se connecte avec **ton propre kubeconfig** (celui déjà utilisé par
+`kubectl`), donc chaque action passe par tes propres droits RBAC sur le cluster.
+
+```bash
+# 1. Construire l'interface une fois (ou après une mise à jour)
+cd ui/console
+npm install
+npm run build
+cd ../..
+
+# 2. Lancer la console (utilise le contexte kubectl courant)
+go run ./cmd/console-api
+# → http://localhost:8090
+```
+
+Options utiles : `--kubeconfig=/chemin/vers/config`, `--context=mon-cluster`,
+`--addr=:9090`. Pendant le développement du frontend, `cd ui/console && npm run dev`
+lance un serveur Vite sur `:5173` qui proxifie `/api` vers `console-api` (démarré avec
+`-dev-cors`) pour l'itération à chaud.
+
+Ce que fait la console, concrètement : elle lit le schéma OpenAPI de chaque CRD directement
+depuis le cluster (`kubectl get crd <nom> -o yaml` sous le capot) et génère un formulaire à
+partir de ce schéma — un bouton **« Voir en YAML »** reste disponible à tout moment pour les
+utilisateurs qui veulent copier/vérifier le YAML équivalent. La liste des CRDs gérées vient de
+`internal/console/registry.go`.
 
 ## Configuration
 

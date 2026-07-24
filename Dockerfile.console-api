@@ -1,0 +1,28 @@
+# Builds the console-api binary with the graphical console (ui/console) baked
+# in as static files. Run locally (or in a container with your kubeconfig
+# mounted in) — this tool always connects with the kubeconfig it's given, it
+# never uses an in-cluster ServiceAccount of its own.
+FROM docker.io/library/node:22-slim@sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3 AS ui-builder
+WORKDIR /ui
+COPY ui/console/package.json ./
+RUN npm install
+COPY ui/console/ ./
+RUN npm run build
+
+FROM docker.io/library/golang:1.26.5@sha256:079e59808d2d252516e27e3f3a9c003740dee7f75e55aa71528766d52bcfc16a AS builder
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+WORKDIR /workspace
+COPY go.mod go.sum ./
+RUN go mod download
+COPY cmd/console-api/ cmd/console-api/
+COPY internal/console/ internal/console/
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -buildvcs=false -ldflags='-s -w -buildid=' -o console-api ./cmd/console-api
+
+FROM gcr.io/distroless/static:nonroot@sha256:d29e660cc75a5b6b1334e03c5c81ccf9bc0884a002c6000dbf0fb96034814478
+WORKDIR /
+COPY --from=builder /workspace/console-api .
+COPY --from=ui-builder /ui/dist ui/console/dist
+USER 65532:65532
+EXPOSE 8090
+ENTRYPOINT ["/console-api"]
