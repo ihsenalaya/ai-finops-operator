@@ -67,3 +67,27 @@ affinity: {}
 
 # Extra args appended to the manager command.
 extraArgs: []
+
+# Graphical console (create/edit CRDs without writing YAML), deployed
+# alongside the operator with its own dedicated ServiceAccount/RBAC scoped to
+# only this operator's 11 CRDs. Enabled by default so installing this chart
+# anywhere brings the console with it — see console-rbac.yaml,
+# console-deployment.yaml, console-service.yaml.
+console:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: ghcr.io/ihsenalaya/ai-finops-operator/console-api
+    # kind / local image: --set console.image.repository=console-api --set console.image.tag=dev --set console.image.pullPolicy=Never
+    tag: ""        # defaults to .Chart.AppVersion when empty
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8090
+  resources:
+    limits:
+      cpu: 200m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi

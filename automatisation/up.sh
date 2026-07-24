@@ -27,6 +27,11 @@ log "building operator image ${IMAGE_NAME}:${IMAGE_TAG}..."
 docker build -f "${DOCKERFILE}" -t "${IMAGE_NAME}:${IMAGE_TAG}" "${BUILD_CONTEXT}"
 kind load docker-image "${IMAGE_NAME}:${IMAGE_TAG}" --name "${CLUSTER_NAME}"
 
+# 2b. Console image (graphical console, deployed alongside the operator) -------
+log "building console image console-api:${IMAGE_TAG}..."
+docker build -f "${BUILD_CONTEXT}/Dockerfile.console-api" -t "console-api:${IMAGE_TAG}" "${BUILD_CONTEXT}"
+kind load docker-image "console-api:${IMAGE_TAG}" --name "${CLUSTER_NAME}"
+
 # 3. Monitoring (Prometheus Operator + Grafana) --------------------------------
 if [ -z "${SKIP_MONITORING:-}" ]; then
   log "installing kube-prometheus-stack in namespace ${MONITORING_NAMESPACE}..."
@@ -51,6 +56,9 @@ helm upgrade --install "${HELM_RELEASE}" "${CHART_DIR}" \
   --set image.repository="${IMAGE_NAME}" \
   --set image.tag="${IMAGE_TAG}" \
   --set image.pullPolicy=Never \
+  --set console.image.repository=console-api \
+  --set console.image.tag="${IMAGE_TAG}" \
+  --set console.image.pullPolicy=Never \
   "${SM_ARGS[@]}" \
   --wait --timeout 5m
 
@@ -84,6 +92,10 @@ cat <<EOF
    kubectl -n ${NAMESPACE} get deploy
    kubectl -n ${DEMO_NAMESPACE} get aireport monthly-demo-report -o yaml
    kubectl -n ${DEMO_NAMESPACE} get configmap monthly-demo-report-report -o jsonpath='{.data.report\\.md}'
+
+ Console (graphical UI, running IN the cluster next to the operator):
+   kubectl -n ${NAMESPACE} port-forward svc/${HELM_RELEASE}-ai-finops-operator-console 8090:8090
+   -> http://localhost:8090
 
  Metrics:
    kubectl -n ${NAMESPACE} port-forward svc/${HELM_RELEASE}-ai-finops-operator-metrics 8080:8080

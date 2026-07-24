@@ -725,45 +725,46 @@ Démontage : `./down.sh`.
 
 ## Console graphique
 
-Pour créer/modifier les CRDs sans écrire de YAML à la main : une petite interface web
-(`ui/console`) et une API REST générique (`console-api`) qui la sert. Aucun compte de
-service dédié — l'outil se connecte avec **ton propre kubeconfig** (celui déjà utilisé par
-`kubectl`), donc chaque action passe par tes propres droits RBAC sur le cluster.
+Une interface web pour créer/modifier les CRDs sans écrire de YAML à la main —
+**déployée automatiquement avec l'opérateur**, dans le cluster, comme n'importe où d'autre
+tu installes ce chart (`console.enabled: true` par défaut dans `values.yaml`).
+
+Elle tourne avec son **propre ServiceAccount et son propre RBAC**, scopé uniquement aux 11
+CRDs de cet opérateur (`ClusterRole` dédiée dans `charts/ai-finops-operator/templates/console-rbac.yaml`)
+— pas de compte de service partagé avec le manager, pas de dépendance à un kubeconfig
+personnel : elle voyage avec l'opérateur, y compris en production.
 
 ```bash
-# 1. Construire l'interface une fois (ou après une mise à jour)
-cd ui/console
-npm install
-npm run build
-cd ../..
-
-# 2. Lancer la console (utilise le contexte kubectl courant)
-go run ./cmd/console-api
+# Après `helm install`, la console tourne déjà dans le cluster (Service ClusterIP) :
+kubectl -n <namespace> port-forward svc/<release>-ai-finops-operator-console 8090:8090
 # → http://localhost:8090
 ```
 
-Options utiles : `--kubeconfig=/chemin/vers/config`, `--context=mon-cluster`,
-`--addr=:9090`. Pendant le développement du frontend, `cd ui/console && npm run dev`
-lance un serveur Vite sur `:5173` qui proxifie `/api` vers `console-api` (démarré avec
-`-dev-cors`) pour l'itération à chaud.
-
 Ce que fait la console, concrètement : elle lit le schéma OpenAPI de chaque CRD directement
-depuis le cluster (`kubectl get crd <nom> -o yaml` sous le capot) et génère un formulaire à
-partir de ce schéma — un bouton **« Voir en YAML »** reste disponible à tout moment pour les
-utilisateurs qui veulent copier/vérifier le YAML équivalent. La liste des CRDs gérées vient de
-`internal/console/registry.go`.
+depuis le cluster et génère un formulaire à partir de ce schéma — un bouton **« Voir en
+YAML »** reste disponible à tout moment pour ceux qui veulent copier/vérifier le YAML
+équivalent. La liste des CRDs gérées vient de `internal/console/registry.go`.
+
+Désactivable via `--set console.enabled=false` si tu ne veux pas la déployer.
+
+### En développement local (sans passer par le chart)
+
+`go run ./cmd/console-api` détecte automatiquement s'il tourne hors cluster et se rabat sur
+ton kubeconfig local (`--kubeconfig`/`--context` pour surcharger, `--addr=:9090` pour changer
+de port). C'est le même binaire dans les deux cas — seule la façon dont il obtient ses
+identifiants change (voir `loadConfig` dans `cmd/console-api/main.go`).
 
 ### Avec le cluster kind de démo
 
-La façon la plus simple de voir la console avec de vraies données : lancer d'abord le
-[démarrage rapide kind](#démarrage-rapide-kind-tout-en-un) (`cd automatisation && ./up.sh`),
-qui bascule automatiquement le contexte `kubectl` courant sur le cluster créé. Ensuite,
-`go run ./cmd/console-api` s'y connecte sans rien configurer de plus, et affiche directement
-les objets réellement réconciliés par `finops-manager` (providers, modèles, budget, politique
-de souveraineté, rapport FinOps) créés par `automatisation/test-apps/`.
+Le [démarrage rapide kind](#démarrage-rapide-kind-tout-en-un) (`cd automatisation && ./up.sh`)
+construit aussi l'image de la console et l'installe via le chart — la console est donc déjà
+là, dans le cluster, une fois le script terminé (voir l'URL de port-forward dans son résumé
+final).
 
-**Validé de bout en bout** de cette façon : cluster kind réel, opérateur réel qui réconcilie,
-console pointée dessus sans configuration additionnelle — pas seulement contre envtest.
+**Validé de bout en bout** de cette façon : cluster kind réel, `finops-manager` réel qui
+réconcilie, pod `console-api` réel dans le cluster connecté via son propre ServiceAccount
+(`"connected via in-cluster ServiceAccount"` dans ses logs) — pas un processus local, pas
+seulement contre envtest.
 
 ## Configuration
 

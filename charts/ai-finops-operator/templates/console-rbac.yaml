@@ -1,0 +1,72 @@
+{{- if .Values.console.enabled -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "operator.fullname" . }}-console
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "operator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: console
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "operator.fullname" . }}-console-role
+  labels:
+    {{- include "operator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: console
+rules:
+# Full CRUD on this operator's own 11 CRDs — the console never touches
+# anything outside its own API group.
+- apiGroups: ["aiops.imperium.io"]
+  resources:
+  - aibreakevenanalyses
+  - aibudgetpolicies
+  - aichangerequests
+  - aifinopsreports
+  - aigateways
+  - aimodels
+  - aiproviders
+  - aiqualitygates
+  - airouteoverrides
+  - airoutingpolicies
+  - aisovereigntypolicies
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+# Namespace picker in the UI.
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list", "watch"]
+# Reading the live OpenAPI schema of exactly these 11 CRDs, to generate forms
+# — scoped by name, not a blanket read on all CustomResourceDefinitions.
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["get"]
+  resourceNames:
+  - aibreakevenanalyses.aiops.imperium.io
+  - aibudgetpolicies.aiops.imperium.io
+  - aichangerequests.aiops.imperium.io
+  - aifinopsreports.aiops.imperium.io
+  - aigateways.aiops.imperium.io
+  - aimodels.aiops.imperium.io
+  - aiproviders.aiops.imperium.io
+  - aiqualitygates.aiops.imperium.io
+  - airouteoverrides.aiops.imperium.io
+  - airoutingpolicies.aiops.imperium.io
+  - aisovereigntypolicies.aiops.imperium.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "operator.fullname" . }}-console-rolebinding
+  labels:
+    {{- include "operator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: console
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "operator.fullname" . }}-console-role
+subjects:
+- kind: ServiceAccount
+  name: {{ include "operator.fullname" . }}-console
+  namespace: {{ .Release.Namespace }}
+{{- end }}
