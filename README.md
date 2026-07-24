@@ -753,6 +753,18 @@ partir de ce schéma — un bouton **« Voir en YAML »** reste disponible à to
 utilisateurs qui veulent copier/vérifier le YAML équivalent. La liste des CRDs gérées vient de
 `internal/console/registry.go`.
 
+### Avec le cluster kind de démo
+
+La façon la plus simple de voir la console avec de vraies données : lancer d'abord le
+[démarrage rapide kind](#démarrage-rapide-kind-tout-en-un) (`cd automatisation && ./up.sh`),
+qui bascule automatiquement le contexte `kubectl` courant sur le cluster créé. Ensuite,
+`go run ./cmd/console-api` s'y connecte sans rien configurer de plus, et affiche directement
+les objets réellement réconciliés par `finops-manager` (providers, modèles, budget, politique
+de souveraineté, rapport FinOps) créés par `automatisation/test-apps/`.
+
+**Validé de bout en bout** de cette façon : cluster kind réel, opérateur réel qui réconcilie,
+console pointée dessus sans configuration additionnelle — pas seulement contre envtest.
+
 ## Configuration
 
 ### Flags du manager (`cmd/finops-manager/main.go`)
